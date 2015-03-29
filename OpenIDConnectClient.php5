@@ -144,6 +144,11 @@ class OpenIDConnectClient
     private $authParams = array();
 
     /**
+     * @var array holds OpenID v2 and OpenID Connect IDs (openid_id & sub, respectively)
+     */
+    private $bridge_v2_to_connect = array();
+
+    /**
      * @param $provider_url string optional
      *
      * @param $client_id string optional
@@ -213,6 +218,8 @@ class OpenIDConnectClient
 
                 // Save the access token
                 $this->accessToken = $token_json->access_token;
+                $this->bridge_v2_to_connect['openid_id'] = $claims->openid_id;
+                $this->bridge_v2_to_connect['sub'] = $claims->sub;
 
                 // Success!
                 return true;
@@ -606,6 +613,13 @@ class OpenIDConnectClient
         curl_close($ch);
 
         return $output;
+    }
+
+    /**
+     * @return array
+     */
+    public function get_bridge_v2_to_connect() {
+        return $this->bridge_v2_to_connect;
     }
 
     /**
