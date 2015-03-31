@@ -144,6 +144,11 @@ class OpenIDConnectClient
     private $authParams = array();
 
     /**
+    * @var bool state of nonce
+    */
+    private $isNonceEnabled = true;
+
+    /**
      * @param $provider_url string optional
      *
      * @param $client_id string optional
@@ -161,6 +166,20 @@ class OpenIDConnectClient
      */
     public function setProviderURL($provider_url) {
         $this->providerConfig['issuer'] = $provider_url;
+    }
+
+    /**
+     * @param $enableNonce
+     */
+    public function setIsNonceEnabled($enableNonce) {
+        $this->isNonceEnabled = $enableNonce;
+    }
+
+    /**
+     * @return bool
+     */
+    public function getIsNonceEnabled($enableNonce) {
+        return $this->isNonceEnabled;
     }
 
     /**
@@ -329,11 +348,6 @@ class OpenIDConnectClient
         $auth_endpoint = $this->getProviderConfigValue("authorization_endpoint");
         $response_type = "code";
 
-        // Generate and store a nonce in the session
-        // The nonce is an arbitrary value
-        $nonce = $this->generateRandString();
-        $_SESSION['openid_connect_nonce'] = $nonce;
-
         // State essentially acts as a session key for OIDC
         $state = $this->generateRandString();
         $_SESSION['openid_connect_state'] = $state;
@@ -342,9 +356,16 @@ class OpenIDConnectClient
             'response_type' => $response_type,
             'redirect_uri' => $this->getRedirectURL(),
             'client_id' => $this->clientID,
-            'nonce' => $nonce,
             'state' => $state
         ));
+
+        if($this->getIsNonceEnabled()){
+            // Generate and store a nonce in the session
+            // The nonce is an arbitrary value
+            $nonce = $this->generateRandString();
+            $_SESSION['openid_connect_nonce'] = $nonce;
+            $auth_params['nonce'] = $nonce;
+        }
 
         // If the client has been registered with additional scopes
         if (sizeof($this->scopes) > 0) {
@@ -467,8 +488,21 @@ class OpenIDConnectClient
 
         return (($claims->iss == $this->getProviderURL())
             && (($claims->aud == $this->clientID) || (in_array($this->clientID, $claims->aud)))
-            && ($claims->nonce == $_SESSION['openid_connect_nonce']));
+            && $this->verifyNonce($claims));
 
+    }
+
+    /**
+     * @param object $claims
+     * @return bool
+     */
+    private function verifyNonce($claims) {
+        if($this->isNonceEnabled()){
+            return $claims->nonce == $_SESSION['openid_connect_nonce'];
+        }
+        else{
+            return true;
+        }
     }
 
     /**
