@@ -497,7 +497,7 @@ class OpenIDConnectClient
      * @return bool
      */
     private function verifyNonce($claims) {
-        if($this->isNonceEnabled()){
+        if($this->getIsNonceEnabled()){
             return $claims->nonce == $_SESSION['openid_connect_nonce'];
         }
         else{
